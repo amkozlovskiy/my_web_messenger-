@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Чат на Python</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .chat-box {
+            height: 400px;
+            overflow-y: scroll;
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: #e1ffc7;
+            border-radius: 10px;
+            display: inline-block;
+            max-width: 80%;
+        }
+        .message .username {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .message .time {
+            font-size: 0.7em;
+            color: #7f8c8d;
+            margin-left: 10px;
+        }
+        #chat-form {
+            display: flex;
+            gap: 10px;
+        }
+        #chat-form input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            flex: 1;
+        }
+        #chat-form button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #chat-form button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h2>📱 Чат на Python (Jinja2)</h2>
+    <div class="chat-box" id="chat-box"></div>
+    <form id="chat-form">
+        <input type="text" id="username" placeholder="Ваше имя" required>
+        <input type="text" id="text" placeholder="Сообщение" required>
+        <button type="submit">Отправить</button>
+    </form>
+
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const form = document.getElementById('chat-form');
+
+        async function loadMessages() {
+            try {
+                const response = await fetch('/messages');
+                const messages = await response.json();
+                chatBox.innerHTML = messages.map(msg =>
+                    `<div class="message">
+                        <span class="username">${msg.username}</span>
+                        <span>${msg.text}</span>
+                        <span class="time">${msg.time}</span>
+                    </div>`
+                ).join('');
+                chatBox.scrollTop = chatBox.scrollHeight;
+            } catch (e) {
+                console.error("Ошибка загрузки:", e);
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value.trim();
+            const text = document.getElementById('text').value.trim();
+            if (!username || !text) return;
+
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('text', text);
+
+            try {
+                await fetch('/send', { method: 'POST', body: formData });
+                document.getElementById('text').value = '';
+                await loadMessages();
+            } catch (e) {
+                console.error("Ошибка отправки:", e);
+            }
+        });
+
+        setInterval(loadMessages, 2000);
+        loadMessages();
+    </script>
+</body>
+</html>
