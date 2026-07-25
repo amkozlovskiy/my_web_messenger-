@@ -1,11 +1,10 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-# from pydantic import BaseModel
+from pydantic import BaseModel
 import json
 import os
 from datetime import datetime
-
 
 app = FastAPI()
 
@@ -15,11 +14,15 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 MESSAGES_FILE = os.path.join(BASE_DIR, "message.json")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+
 # оставим модель закомиченной для будующих улучшений
 # class Message(BaseModel):
 #     username: str
 #     text: str
 #     time: str = datetime.now().strftime("%H:%M:%S") # нужно добавить дату (сегодня/вчера/неделю назад и т.д)
+
+class EditData(BaseModel):
+    new_text: str
 
 def load_messages():
     if not os.path.exists(MESSAGES_FILE):
@@ -27,9 +30,11 @@ def load_messages():
     with open(MESSAGES_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
 
+
 def save_messages(messages):
     with open(MESSAGES_FILE, "w", encoding="utf-8") as f:
         json.dump(messages, f, ensure_ascii=False, indent=2)
+
 
 @app.get("/", response_class=HTMLResponse)
 def get_chat(request: Request):
@@ -38,8 +43,8 @@ def get_chat(request: Request):
 
 @app.post("/send")
 def send_message(
-        username: str=Form(...),
-        text: str=Form(...),
+        username: str = Form(...),
+        text: str = Form(...),
         to: str = Form(...)
 ):
     messages = load_messages()
@@ -57,7 +62,7 @@ def send_message(
 
 
 @app.get("/messages")
-def get_messages(user: str="", other: str=""):
+def get_messages(user: str = "", other: str = ""):
     """Возвращает сообщения между User и Other"""
     messages = load_messages()
     if user and other:
@@ -82,3 +87,51 @@ def get_users():
     # Убираем пустые имена
     users.discard("")
     return {"users": sorted(list(users))}
+
+
+@app.get("/last_message_id")
+def get_last_message_id():
+    """Возвращает ID последнего сообщения (для проверки новых)"""
+    messages = load_messages()
+    if not messages:
+        return {"last_id": 0}
+    # Используем индекс последнего сообщения как ID
+    return {"last_id": len(messages) - 1}
+
+
+@app.get("/unread_count")
+def get_unread_count(user: str = ""):
+    """Возвращает количество непрочитанных сообщений для пользователя"""
+    messages = load_messages()
+    if not user:
+        return {"total": 0, "by_user": {}}
+
+    unread_by_user = {}
+    total = 0
+    for msg in messages:
+        # Если сообщение адресовано текущему пользователю и не от него
+        if msg["to"] == user and msg["from"] != user:
+            total += 1
+            unread_by_user[msg["from"]] = unread_by_user.get(msg["from"], 0) + 1
+
+    return {"total": total, "by_user": unread_by_user}
+
+@app.put("/messages/{index}")
+def edit_message(index: int, edit_data: EditData, user: str=""):
+    """Редактирует сообщение по индексу (только если это
+    сообщение пользователя)"""
+    messages = load_messages()
+    if index < 0 or index >= len(messages):
+        raise HTTPException(status_code=404, detail="Сообщение не найдено")
+
+    msg = messages[index]
+    # Проверяем, что сообщение принадлежит пользователю
+    if user and msg["from"] != user:
+        raise HTTPException(status_code=403, detail="Нельзя редактировать чужое сообщение")
+
+    # Редактируем текст
+    messages[index]["text"] = edit_data.new_text
+    #Добавляем метку, что сообщение отредактировано
+    messages[index]["edited"] = True
+    save_messages(messages)
+    return {"status": "ok"}
