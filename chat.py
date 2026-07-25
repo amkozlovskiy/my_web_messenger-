@@ -1,22 +1,25 @@
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel
+# from pydantic import BaseModel
 import json
 import os
 from datetime import datetime
 
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
 
-MESSAGES_FILE = "messages.json"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+# MESSAGES_FILE = "messages.json"
+MESSAGES_FILE = os.path.join(BASE_DIR, "message.json")
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
-
-class Message(BaseModel):
-    username: str
-    text: str
-    time: str = datetime.now().strftime("%H:%M:%S") # нужно добавить дату (сегодня/вчера/неделю назад и т.д)
+# оставим модель закомиченной для будующих улучшений
+# class Message(BaseModel):
+#     username: str
+#     text: str
+#     time: str = datetime.now().strftime("%H:%M:%S") # нужно добавить дату (сегодня/вчера/неделю назад и т.д)
 
 def load_messages():
     if not os.path.exists(MESSAGES_FILE):
@@ -34,13 +37,19 @@ def get_chat(request: Request):
 
 
 @app.post("/send")
-def send_message(username: str=Form(...), text: str=Form(...)):
+def send_message(
+        username: str=Form(...),
+        text: str=Form(...),
+        to: str = Form(...)
+):
     messages = load_messages()
+    now = datetime.now()
     new_message = {
-        "username": username,
+        "from": username,
+        "to": to,
         "text": text,
-        "time": datetime.now().strftime("%H:%M:%S"),
-        "date": datetime.now().strftime("%Y-%m-%d")
+        "time": now.strftime("%H:%M:%S"),
+        "date": now.strftime("%Y-%m-%d")
     }
     messages.append(new_message)
     save_messages(messages)
@@ -48,5 +57,28 @@ def send_message(username: str=Form(...), text: str=Form(...)):
 
 
 @app.get("/messages")
-def get_messages():
-    return load_messages()
+def get_messages(user: str="", other: str=""):
+    """Возвращает сообщения между User и Other"""
+    messages = load_messages()
+    if user and other:
+        # Фильтрируем только диалог между User и Other
+        filtered = [
+            msg for msg in messages
+            if (msg["from"] == user and msg["to"] == other or
+                (msg["from"] == other and msg["to"] == user))
+        ]
+        return filtered
+    return
+
+
+@app.get("/users")
+def get_users():
+    """Возвращает список всех, кто писал сообщения"""
+    messages = load_messages()
+    users = set()
+    for msg in messages:
+        users.add(msg["from"])
+        users.add(msg["to"])
+    # Убираем пустые имена
+    users.discard("")
+    return {"users": sorted(list(users))}

@@ -5,9 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Чат на Python</title>
     <style>
+        * {
+            box-sizing: border-box;
+        }
         body {
             font-family: Arial, sans-serif;
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
             background: #f0f0f0;
@@ -16,26 +19,102 @@
             text-align: center;
             color: #333;
         }
-        .chat-box {
-            height: 400px;
-            overflow-y: scroll;
+        .container {
+            display: flex;
+            gap: 20px;
+            height: 500px;
+        }
+        /* Список собеседников */
+        .users-list {
+            width: 200px;
             background: white;
-            padding: 15px;
             border-radius: 12px;
-            margin-bottom: 15px;
+            padding: 10px;
             border: 1px solid #ccc;
+            overflow-y: auto;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .users-list h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+            color: #555;
+            text-align: center;
+        }
+        #users-container {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .user-item {
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+        .user-item:hover {
+            background: #e0e0e0;
+        }
+        .user-item.active {
+            background: #007bff;
+            color: white;
+        }
+        /* Блок добавления собеседника */
+        .add-user-section {
+            margin-top: 15px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+            flex-shrink: 0;
+        }
+        .add-user-section input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .add-user-section button {
+            width: 100%;
+            margin-top: 5px;
+            padding: 6px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .add-user-section button:hover {
+            background: #218838;
+        }
+        /* Чат */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #ccc;
+            overflow: hidden;
+        }
+        .chat-box {
+            flex: 1;
+            overflow-y: scroll;
+            padding: 15px;
             display: flex;
             flex-direction: column;
         }
         .message {
-            background: #e1ffc7;
             border-radius: 12px;
             padding: 10px 14px;
             margin-bottom: 12px;
             max-width: 80%;
             min-width: 150px;
-            align-self: flex-start;
             word-wrap: break-word;
+            align-self: flex-start;
+            background: #e1ffc7;
         }
         .message .username {
             font-weight: bold;
@@ -67,15 +146,23 @@
             border-radius: 4px;
             font-size: 0.9em;
         }
-        /* Свои сообщения (от текущего пользователя) — справа */
         .message.my-message {
             align-self: flex-end;
             background: #dcf8c6;
         }
+        .no-messages {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-style: italic;
+        }
+        /* Форма отправки */
         #chat-form {
             display: flex;
             gap: 10px;
-            flex-wrap: wrap;
+            padding: 10px;
+            border-top: 1px solid #ccc;
+            background: #fafafa;
         }
         #chat-form input {
             padding: 10px;
@@ -95,23 +182,73 @@
         #chat-form button:hover {
             background: #0056b3;
         }
+        #chat-form input:disabled,
+        #chat-form button:disabled {
+            background: #e9ecef;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        /* Адаптивность для телефонов */
+        @media (max-width: 600px) {
+            .container {
+                flex-direction: column;
+                height: auto;
+            }
+            .users-list {
+                width: 100%;
+                height: 200px;
+            }
+            .chat-area {
+                height: 400px;
+            }
+        }
     </style>
 </head>
 <body>
     <h2>📱 Чат на Python</h2>
-    <div class="chat-box" id="chat-box"></div>
 
-    <form id="chat-form">
-        <input type="text" id="username" placeholder="Ваше имя" required>
-        <input type="text" id="text" placeholder="Сообщение" required>
-        <button type="submit">Отправить</button>
-    </form>
+    <div class="container">
+        <!-- Список собеседников с возможностью добавления -->
+        <div class="users-list" id="users-list">
+            <h3>Собеседники</h3>
+            <div id="users-container">
+                <div class="user-item" style="color:#999; font-style:italic;">Загрузка...</div>
+            </div>
+
+            <!-- НОВЫЙ БЛОК: Добавление собеседника вручную -->
+            <div class="add-user-section">
+                <input type="text" id="new-user-input" placeholder="Новый собеседник">
+                <button id="add-user-btn">➕ Добавить</button>
+            </div>
+        </div>
+
+        <!-- Область чата -->
+        <div class="chat-area">
+            <div class="chat-box" id="chat-box">
+                <div class="no-messages">Введите ваше имя и добавьте собеседника справа</div>
+            </div>
+
+            <form id="chat-form">
+                <input type="text" id="username" placeholder="Ваше имя" required>
+                <input type="text" id="text" placeholder="Сообщение" required disabled>
+                <button type="submit" disabled>Отправить</button>
+            </form>
+        </div>
+    </div>
 
     <script>
+        // ----- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ -----
         const chatBox = document.getElementById('chat-box');
+        const usersContainer = document.getElementById('users-container');
         const form = document.getElementById('chat-form');
+        const usernameInput = document.getElementById('username');
+        const textInput = document.getElementById('text');
+        const submitBtn = document.querySelector('#chat-form button');
 
-        // Функция форматирования даты
+        let currentUser = '';
+        let currentChat = '';  // с кем сейчас ведём диалог
+
+        // ----- ФОРМАТИРОВАНИЕ ДАТЫ -----
         function formatDate(dateStr) {
             const msgDate = new Date(dateStr + 'T00:00:00');
             const today = new Date();
@@ -121,36 +258,129 @@
             weekAgo.setDate(today.getDate() - 7);
 
             if (msgDate > weekAgo) {
-                if (msgDate.toDateString() === today.toDateString()) {
-                    return 'Сегодня';
-                } else if (msgDate.toDateString() === yesterday.toDateString()) {
-                    return 'Вчера';
-                } else {
-                    const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
-                    return days[msgDate.getDay()];
-                }
+                if (msgDate.toDateString() === today.toDateString()) return 'Сегодня';
+                if (msgDate.toDateString() === yesterday.toDateString()) return 'Вчера';
+                const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
+                return days[msgDate.getDay()];
             } else {
-                const options = { day: 'numeric', month: 'long', year: 'numeric' };
-                return msgDate.toLocaleDateString('ru-RU', options);
+                return msgDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
             }
         }
 
-        // Загрузка сообщений
-        async function loadMessages() {
+        // ----- ЗАГРУЗКА СПИСКА СОБЕСЕДНИКОВ -----
+        async function loadUsers() {
             try {
-                const response = await fetch('/messages');
+                const response = await fetch('/users');
+                const data = await response.json();
+                const users = data.users || [];
+
+                // Фильтруем: убираем текущего пользователя из списка
+                const filtered = users.filter(u => u !== currentUser);
+
+                if (filtered.length === 0) {
+                    usersContainer.innerHTML = `<div class="user-item" style="color:#999; font-style:italic;">Нет собеседников. Добавьте вручную</div>`;
+                    return;
+                }
+
+                usersContainer.innerHTML = filtered.map(user => `
+                    <div class="user-item" data-user="${user}" onclick="selectUser('${user}')">
+                        ${user}
+                    </div>
+                `).join('');
+
+                // Если есть активный чат — подсветить его
+                if (currentChat) {
+                    document.querySelectorAll('.user-item').forEach(el => {
+                        if (el.dataset.user === currentChat) {
+                            el.classList.add('active');
+                        }
+                    });
+                }
+            } catch (e) {
+                console.error('Ошибка загрузки пользователей:', e);
+            }
+        }
+
+        // ----- ВЫБОР СОБЕСЕДНИКА -----
+        window.selectUser = function(user) {
+            currentChat = user;
+            // Обновляем активный класс
+            document.querySelectorAll('.user-item').forEach(el => {
+                el.classList.toggle('active', el.dataset.user === user);
+            });
+            // Включаем поля ввода
+            textInput.disabled = false;
+            submitBtn.disabled = false;
+            textInput.placeholder = `Сообщение для ${user}`;
+            loadMessages();
+        };
+
+        // ----- ДОБАВЛЕНИЕ НОВОГО СОБЕСЕДНИКА ВРУЧНУЮ -----
+        const newUserInput = document.getElementById('new-user-input');
+        const addUserBtn = document.getElementById('add-user-btn');
+
+        addUserBtn.addEventListener('click', function() {
+            const newUser = newUserInput.value.trim();
+            if (!newUser) {
+                alert('Введите имя собеседника');
+                return;
+            }
+            if (newUser === currentUser) {
+                alert('Вы не можете быть сами себе собеседником');
+                return;
+            }
+
+            // Проверяем, есть ли уже такой в списке
+            const existing = document.querySelector(`.user-item[data-user="${newUser}"]`);
+            if (existing) {
+                alert('Этот собеседник уже есть в списке');
+                return;
+            }
+
+            // Создаём элемент в списке
+            const newItem = document.createElement('div');
+            newItem.className = 'user-item';
+            newItem.dataset.user = newUser;
+            newItem.textContent = newUser;
+            newItem.onclick = function() { selectUser(newUser); };
+            usersContainer.appendChild(newItem);
+
+            // Очищаем поле
+            newUserInput.value = '';
+
+            // Автоматически выбираем добавленного собеседника
+            selectUser(newUser);
+
+            // Убираем сообщение "Нет собеседников"
+            const placeholder = usersContainer.querySelector('.user-item[style]');
+            if (placeholder && placeholder.style.color === 'rgb(153, 153, 153)') {
+                placeholder.remove();
+            }
+        });
+
+        // ----- ЗАГРУЗКА СООБЩЕНИЙ -----
+        async function loadMessages() {
+            if (!currentUser || !currentChat) {
+                chatBox.innerHTML = `<div class="no-messages">Выберите собеседника слева</div>`;
+                return;
+            }
+
+            try {
+                const url = `/messages?user=${encodeURIComponent(currentUser)}&other=${encodeURIComponent(currentChat)}`;
+                const response = await fetch(url);
                 const messages = await response.json();
 
-                // Определяем текущего пользователя (чтобы выделять свои сообщения)
-                const usernameInput = document.getElementById('username');
-                const currentUser = usernameInput.value.trim() || 'гость';
+                if (messages.length === 0) {
+                    chatBox.innerHTML = `<div class="no-messages">Нет сообщений с ${currentChat}</div>`;
+                    return;
+                }
 
                 chatBox.innerHTML = messages.map(msg => {
-                    const isMy = msg.username === currentUser;
+                    const isMy = msg.from === currentUser;
                     const dateLabel = formatDate(msg.date);
 
                     return `<div class="message ${isMy ? 'my-message' : ''}">
-                        <div class="username">${msg.username}</div>
+                        <div class="username">${msg.from}</div>
                         <div class="text">${msg.text}</div>
                         <div class="meta">
                             <span class="time">${msg.time}</span>
@@ -161,35 +391,67 @@
 
                 chatBox.scrollTop = chatBox.scrollHeight;
             } catch (e) {
-                console.error('Ошибка загрузки:', e);
+                console.error('Ошибка загрузки сообщений:', e);
             }
         }
 
-        // Отправка сообщения
+        // ----- ОТПРАВКА СООБЩЕНИЯ -----
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = document.getElementById('username').value.trim();
-            const text = document.getElementById('text').value.trim();
-            if (!username || !text) return;
+            const username = usernameInput.value.trim();
+            const text = textInput.value.trim();
+
+            if (!username || !text || !currentChat) return;
+
+            // Если имя изменилось — обновляем
+            if (username !== currentUser) {
+                currentUser = username;
+                await loadUsers();
+                // Если текущий пользователь изменился — перезагружаем чат
+                if (currentChat) {
+                    await loadMessages();
+                }
+            }
 
             const formData = new FormData();
             formData.append('username', username);
             formData.append('text', text);
+            formData.append('to', currentChat);
 
             try {
                 await fetch('/send', { method: 'POST', body: formData });
-                document.getElementById('text').value = '';
+                textInput.value = '';
                 await loadMessages();
+                await loadUsers(); // обновляем список собеседников
             } catch (e) {
                 console.error('Ошибка отправки:', e);
             }
         });
 
-        // Автообновление каждые 2 секунды
-        setInterval(loadMessages, 2000);
+        // ----- АВТООБНОВЛЕНИЕ -----
+        setInterval(() => {
+            if (currentUser && currentChat) {
+                loadMessages();
+                loadUsers();
+            }
+        }, 3000);
 
-        // Первая загрузка
-        loadMessages();
+        // ----- ПЕРВАЯ ЗАГРУЗКА -----
+        // Ждём, когда пользователь введёт имя
+        usernameInput.addEventListener('change', () => {
+            const name = usernameInput.value.trim();
+            if (name) {
+                currentUser = name;
+                loadUsers();
+                // Если был выбран собеседник — загружаем чат
+                if (currentChat) {
+                    loadMessages();
+                }
+            }
+        });
+
+        // При загрузке страницы — показываем подсказку
+        chatBox.innerHTML = `<div class="no-messages">Введите ваше имя и добавьте собеседника справа</div>`;
     </script>
 </body>
 </html>
