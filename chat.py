@@ -39,7 +39,8 @@ def send_message(username: str=Form(...), text: str=Form(...)):
     new_message = {
         "username": username,
         "text": text,
-        "time": datetime.now().strftime("%H:%M:%S")
+        "time": datetime.now().strftime("%H:%M:%S"),
+        "date": datetime.now().strftime("%Y-%m-%d")
     }
     messages.append(new_message)
     save_messages(messages)
