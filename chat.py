@@ -14,12 +14,9 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
 MESSAGES_FILE = os.path.join(BASE_DIR, "message.json")
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
+# Статусы пользователей (в памяти, при перезапуске сервера сбрасываюся)
+user_statuses = {}  # {username: datetime}
 
-# оставим модель закомиченной для будующих улучшений
-# class Message(BaseModel):
-#     username: str
-#     text: str
-#     time: str = datetime.now().strftime("%H:%M:%S") # нужно добавить дату (сегодня/вчера/неделю назад и т.д)
 
 class EditData(BaseModel):
     new_text: str
@@ -170,3 +167,76 @@ def delete_message(index: int, user: str = ""):
     deleted_msg = messages.pop(index)
     save_messages(messages)
     return {"status": "ok", "deleted": deleted_msg}
+
+
+@app.get("/dialogs")
+def get_dialogs(user: str = ""):
+    """Возвращает список диалогов для пользователя с последним сообщением"""
+    if not user:
+        return {"dialogs": []}
+
+    messages = load_messages()
+    dialogs = {}  # {собеседник: последнее_сообщение}
+
+    for msg in messages:
+        # Если сообщение от пользователя или ему адресовано
+        if msg["from"] == user or msg["to"] == user:
+            # Определяем собеседника
+            other = msg["to"] if msg["from"] == user else msg["from"]
+            # Пропускаем пустые имена
+            if not other or other == user:
+                continue
+
+            # Сохраняем последнее сообщение (по времени)
+            # Так как сообщения в списке хронологические, последнее — это самое новое
+            if other not in dialogs:
+                dialogs[other] = msg
+            else:
+                # Если это сообщение новее, чем сохранённое — обновляем
+                # (используем сравнение дат/времени, если нужно, но поскольку список упорядочен, можно просто перезаписать)
+                dialogs[other] = msg
+
+    # Превращаем в список и сортируем по времени (последние сверху)
+    result = []
+    for other, msg in dialogs.items():
+        # Определяем, прочитано ли последнее сообщение (если оно от другого пользователя)
+        is_unread = (msg["from"] == other and not msg.get("read", False))
+        result.append({
+            "user": other,
+            "last_message": {
+                "text": msg["text"][:50] + ("..." if len(msg["text"]) > 50 else ""),
+                "time": msg["time"],
+                "date": msg["date"],
+                "from": msg["from"]
+            },
+            "unread": is_unread
+        })
+
+    # Сортируем по дате (последние сверху)
+    result.sort(key=lambda x: x["last_message"]["date"] + " " + x["last_message"]["time"], reverse=True)
+
+    return {"dialogs": result}
+
+@app.post("/update_status")
+def update_status(username: str=Form(...)):
+    """Обновляет время последнего действия пользователя"""
+    from datetime import datetime
+    user_statuses[username] = datetime.now()
+    return {"status": "ok"}
+
+
+@app.get("/statuses")
+def get_statuses():
+    """Возвращает статусы всех пользователей"""
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    result = {}
+    for user, last_seen, in user_statuses.items():
+        diff = now - last_seen
+        if diff.total_seconds() < 30:
+            result[user] = "online"
+        elif diff.total_seconds() < 300: # 5 минут
+            result[user] = f"был {diff.second // 60} мин назад"
+        else:
+            result[user] = "offline"
+    return result
