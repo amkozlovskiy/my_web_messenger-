@@ -30,6 +30,8 @@
         .message .date-label { background: #f0f0f0; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; }
         .message .edit-btn { background: none; border: none; cursor: pointer; color: #007bff; font-size: 1.2em; padding: 0 5px; margin-left: 5px; }
         .message .edit-btn:hover { color: #0056b3; }
+        .message .delete-btn { background: none; border: none; cursor: pointer; color: #ff4444; font-size: 1.2em; padding: 0 5px; margin-left: 5px; }
+        .message .delete-btn:hover { color: #cc0000; }
         .message.my-message { align-self: flex-end; background: #dcf8c6; }
         .no-messages { text-align: center; color: #999; padding: 20px; font-style: italic; }
         #chat-form { display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ccc; background: #fafafa; }
@@ -71,6 +73,8 @@
 
         let currentUser = '';
         let currentChat = '';
+        let lastMessageId = 0;
+        let isPageFocused = true;
 
         // ----- ФОРМАТИРОВАНИЕ ДАТЫ -----
         function formatDate(dateStr) {
@@ -87,6 +91,40 @@
                 return days[msgDate.getDay()];
             } else {
                 return msgDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+            }
+        }
+
+        // ----- ЗВУК -----
+        function playNotificationSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                gainNode.gain.value = 0.15;
+                oscillator.start();
+                oscillator.stop(audioCtx.currentTime + 0.12);
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            } catch (e) {
+                console.log('Звук не поддерживается');
+            }
+        }
+
+        // ----- УВЕДОМЛЕНИЯ -----
+        function showDesktopNotification(username, text) {
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'granted') {
+                new Notification(`📩 Новое сообщение от ${username}`, {
+                    body: text,
+                    icon: '📱'
+                });
+            } else if (Notification.permission === 'default') {
+                Notification.requestPermission();
             }
         }
 
@@ -143,10 +181,23 @@
                 const url = `/messages?user=${encodeURIComponent(currentUser)}&other=${encodeURIComponent(currentChat)}`;
                 const response = await fetch(url);
                 const messages = await response.json();
+
+                if (messages.length > 0) {
+                    const lastMsg = messages[messages.length - 1];
+                    if (lastMsg.from !== currentUser && messages.length > lastMessageId) {
+                        playNotificationSound();
+                        if (!isPageFocused) {
+                            showDesktopNotification(lastMsg.from, lastMsg.text);
+                        }
+                    }
+                    lastMessageId = messages.length;
+                }
+
                 if (messages.length === 0) {
                     chatBox.innerHTML = `<div class="no-messages">Нет сообщений с ${currentChat}</div>`;
                     return;
                 }
+
                 chatBox.innerHTML = messages.map((msg, index) => {
                     const isMy = msg.from === currentUser;
                     const dateLabel = formatDate(msg.date);
@@ -157,7 +208,10 @@
                         <div class="meta">
                             <span class="time">${msg.time}</span>
                             <span class="date-label">${dateLabel}</span>
-                            ${isMy ? `<button class="edit-btn" data-index="${index}">✎</button>` : ''}
+                            ${isMy ? `
+                                <button class="edit-btn" data-index="${index}">✎</button>
+                                <button class="delete-btn" data-index="${index}">🗑️</button>
+                            ` : ''}
                         </div>
                     </div>`;
                 }).join('');
@@ -182,12 +236,35 @@
                 });
                 if (response.ok) {
                     await loadMessages();
+                    await updateUnreadCounts();
                 } else {
                     const error = await response.json();
                     alert(`Ошибка: ${error.detail || 'Не удалось редактировать'}`);
                 }
             } catch (e) {
                 console.error('Ошибка редактирования:', e);
+            }
+        }
+
+        // ----- УДАЛЕНИЕ (НОВАЯ ФУНКЦИЯ) -----
+        async function deleteMessage(index) {
+            if (!currentUser) return;
+            if (!confirm('Удалить это сообщение?')) return;
+
+            try {
+                const response = await fetch(`/messages/${index}?user=${encodeURIComponent(currentUser)}`, {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    await loadMessages();
+                    await loadUsers();
+                    await updateUnreadCounts();
+                } else {
+                    const error = await response.json();
+                    alert(`Ошибка: ${error.detail || 'Не удалось удалить'}`);
+                }
+            } catch (e) {
+                console.error('Ошибка удаления:', e);
             }
         }
 
@@ -200,6 +277,7 @@
             textInput.disabled = false;
             submitBtn.disabled = false;
             textInput.placeholder = `Сообщение для ${user}`;
+            lastMessageId = 0;
             loadMessages();
             markMessagesAsRead();
         };
@@ -273,18 +351,29 @@
             }
         }
 
-        // ----- ОБРАБОТЧИК РЕДАКТИРОВАНИЯ -----
+        // ----- ОБРАБОТЧИКИ ДЛЯ КНОПОК -----
         chatBox.addEventListener('click', async (e) => {
-            const btn = e.target.closest('.edit-btn');
-            if (!btn) return;
-            const index = parseInt(btn.dataset.index);
-            if (isNaN(index)) return;
-            const messageDiv = btn.closest('.message');
-            const textDiv = messageDiv.querySelector('.text');
-            const currentText = textDiv.textContent.replace(' (ред.)', '').trim();
-            const newText = prompt('Редактировать сообщение:', currentText);
-            if (newText !== null && newText.trim() !== currentText) {
-                await editMessage(index, newText);
+            // Редактирование
+            const editBtn = e.target.closest('.edit-btn');
+            if (editBtn) {
+                const index = parseInt(editBtn.dataset.index);
+                if (isNaN(index)) return;
+                const messageDiv = editBtn.closest('.message');
+                const textDiv = messageDiv.querySelector('.text');
+                const currentText = textDiv.textContent.replace(' (ред.)', '').trim();
+                const newText = prompt('Редактировать сообщение:', currentText);
+                if (newText !== null && newText.trim() !== currentText) {
+                    await editMessage(index, newText);
+                }
+                return;
+            }
+
+            // Удаление
+            const deleteBtn = e.target.closest('.delete-btn');
+            if (deleteBtn) {
+                const index = parseInt(deleteBtn.dataset.index);
+                if (isNaN(index)) return;
+                await deleteMessage(index);
             }
         });
 
@@ -296,6 +385,16 @@
                 updateUnreadCounts();
             }
         }, 3000);
+
+        // ----- ФОКУС -----
+        document.addEventListener('visibilitychange', () => {
+            isPageFocused = !document.hidden;
+        });
+
+        // ----- ЗАПРОС УВЕДОМЛЕНИЙ -----
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
 
         // ----- ПЕРВАЯ ЗАГРУЗКА -----
         usernameInput.addEventListener('change', () => {

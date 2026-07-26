@@ -153,3 +153,20 @@ def get_last_message_id():
         return {"last_id": 0}
     # Используем индекс последнего сообщения как ID
     return {"last_id": len(messages) - 1}
+
+
+@app.delete("/messages/{index}")
+def delete_message(index: int, user: str = ""):
+    """Удаляет сообщение по индексу (только если оно принадлежит пользователю)"""
+    messages = load_messages()
+    if index < 0 or index >= len(messages):
+        raise HTTPException(status_code=404, detail="Сообщение не найдено")
+
+    msg = messages[index]
+    if user and msg["from"] != user:
+        raise HTTPException(status_code=403, detail="Нельзя удалять чужое сообщение")
+
+    # Удаляем сообщение из списка
+    deleted_msg = messages.pop(index)
+    save_messages(messages)
+    return {"status": "ok", "deleted": deleted_msg}
