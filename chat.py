@@ -54,7 +54,9 @@ def send_message(
         "to": to,
         "text": text,
         "time": now.strftime("%H:%M:%S"),
-        "date": now.strftime("%Y-%m-%d")
+        "date": now.strftime("%Y-%m-%d"),
+        "edited": False,
+        "read": False
     }
     messages.append(new_message)
     save_messages(messages)
@@ -73,7 +75,7 @@ def get_messages(user: str = "", other: str = ""):
                 (msg["from"] == other and msg["to"] == user))
         ]
         return filtered
-    return
+    return messages
 
 
 @app.get("/users")
@@ -89,32 +91,20 @@ def get_users():
     return {"users": sorted(list(users))}
 
 
-@app.get("/last_message_id")
-def get_last_message_id():
-    """Возвращает ID последнего сообщения (для проверки новых)"""
+@app.put("/messages/read")
+def mark_as_read(user: str = "", other: str = ""):
+    """Отмечает все сообщения от other к user как прочитанные"""
+    if not user or not other:
+        return {"status": "error", "message": "Не указаны пользователи"}
+
     messages = load_messages()
-    if not messages:
-        return {"last_id": 0}
-    # Используем индекс последнего сообщения как ID
-    return {"last_id": len(messages) - 1}
-
-
-@app.get("/unread_count")
-def get_unread_count(user: str = ""):
-    """Возвращает количество непрочитанных сообщений для пользователя"""
-    messages = load_messages()
-    if not user:
-        return {"total": 0, "by_user": {}}
-
-    unread_by_user = {}
-    total = 0
+    updated = 0
     for msg in messages:
-        # Если сообщение адресовано текущему пользователю и не от него
-        if msg["to"] == user and msg["from"] != user:
-            total += 1
-            unread_by_user[msg["from"]] = unread_by_user.get(msg["from"], 0) + 1
-
-    return {"total": total, "by_user": unread_by_user}
+        if msg["from"] == other and msg["to"] == user and not msg.get("read", False):
+            msg["read"] = True
+            updated += 1
+    save_messages(messages)
+    return {"status": "ok", "updated": updated}
 
 @app.put("/messages/{index}")
 def edit_message(index: int, edit_data: EditData, user: str=""):
@@ -135,3 +125,31 @@ def edit_message(index: int, edit_data: EditData, user: str=""):
     messages[index]["edited"] = True
     save_messages(messages)
     return {"status": "ok"}
+
+
+@app.get("/unread_count")
+def get_unread_count(user: str = ""):
+    """Возвращает количество непрочитанных сообщений для пользователя"""
+    messages = load_messages()
+    if not user:
+        return {"total": 0, "by_user": {}}
+
+    unread_by_user = {}
+    total = 0
+    for msg in messages:
+        # Если сообщение адресовано текущему пользователю и не от него
+        if msg["to"] == user and msg["from"] != user and not msg.get("read", False):
+            total += 1
+            unread_by_user[msg["from"]] = unread_by_user.get(msg["from"], 0) + 1
+
+    return {"total": total, "by_user": unread_by_user}
+
+
+@app.get("/last_message_id")
+def get_last_message_id():
+    """Возвращает ID последнего сообщения (для проверки новых)"""
+    messages = load_messages()
+    if not messages:
+        return {"last_id": 0}
+    # Используем индекс последнего сообщения как ID
+    return {"last_id": len(messages) - 1}
