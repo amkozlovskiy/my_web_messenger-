@@ -1,67 +1,474 @@
 <!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Чат на Python</title>
     <style>
-        * { box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f0f0f0; }
-        h2 { text-align: center; color: #333; }
-        .container { display: flex; gap: 20px; height: 500px; }
-        .users-list { width: 200px; background: white; border-radius: 12px; padding: 10px; border: 1px solid #ccc; overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; }
-        .users-list h3 { margin: 0 0 10px 0; font-size: 16px; color: #555; text-align: center; }
-        #users-container { flex: 1; overflow-y: auto; }
-        .user-item { padding: 8px 12px; margin-bottom: 5px; border-radius: 8px; cursor: pointer; transition: background 0.2s; font-size: 14px; display: flex; justify-content: space-between; align-items: center; }
-        .user-item:hover { background: #e0e0e0; }
-        .user-item.active { background: #007bff; color: white; }
-        .user-item .badge { background: #ff6b6b; color: white; border-radius: 50%; padding: 0 6px; font-size: 12px; min-width: 20px; text-align: center; }
-        .add-user-section { margin-top: 15px; border-top: 1px solid #ddd; padding-top: 10px; flex-shrink: 0; }
-        .add-user-section input { width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 5px; font-size: 14px; }
-        .add-user-section button { width: 100%; margin-top: 5px; padding: 6px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; }
-        .add-user-section button:hover { background: #218838; }
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: white; border-radius: 12px; border: 1px solid #ccc; overflow: hidden; }
-        .chat-box { flex: 1; overflow-y: scroll; padding: 15px; display: flex; flex-direction: column; }
-        .message { border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; max-width: 80%; min-width: 150px; word-wrap: break-word; align-self: flex-start; background: #e1ffc7; }
-        .message .username { font-weight: bold; color: #2c3e50; display: block; margin-bottom: 4px; font-size: 0.9em; }
-        .message .text { display: block; margin-bottom: 6px; font-size: 1em; }
-        .message .meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.7em; color: #7f8c8d; border-top: 1px dashed #ddd; padding-top: 4px; }
-        .message .time { margin-right: 10px; }
-        .message .date-label { background: #f0f0f0; padding: 2px 8px; border-radius: 4px; font-size: 0.9em; }
-        .message .edit-btn { background: none; border: none; cursor: pointer; color: #007bff; font-size: 1.2em; padding: 0 5px; margin-left: 5px; }
-        .message .edit-btn:hover { color: #0056b3; }
-        .message .delete-btn { background: none; border: none; cursor: pointer; color: #ff4444; font-size: 1.2em; padding: 0 5px; margin-left: 5px; }
-        .message .delete-btn:hover { color: #cc0000; }
-        .message.my-message { align-self: flex-end; background: #dcf8c6; }
-        .no-messages { text-align: center; color: #999; padding: 20px; font-style: italic; }
-        #chat-form { display: flex; gap: 10px; padding: 10px; border-top: 1px solid #ccc; background: #fafafa; }
-        #chat-form input { padding: 10px; border: 1px solid #ccc; border-radius: 5px; flex: 1; }
-        #chat-form button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        #chat-form button:hover { background: #0056b3; }
-        #chat-form input:disabled, #chat-form button:disabled { background: #e9ecef; cursor: not-allowed; opacity: 0.7; }
-        @media (max-width: 600px) { .container { flex-direction: column; height: auto; } .users-list { width: 100%; height: 200px; } .chat-area { height: 400px; } }
+        /* ----- ГЛОБАЛЬНЫЕ СТИЛИ ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #e5e5e5;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+        }
+        .app-container {
+            max-width: 900px;
+            width: 100%;
+            height: 95vh;
+            max-height: 700px;
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ----- ХЕДЕР ----- */
+        .app-header {
+            background: #ffffff;
+            padding: 16px 20px;
+            border-bottom: 1px solid #e9ecf0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .app-header h2 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1f2a3a;
+            margin: 0;
+        }
+        .app-header .user-badge {
+            background: #eef3f7;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .app-header .user-badge::before {
+            content: "👤";
+        }
+
+        /* ----- ОСНОВНАЯ СЕТКА ----- */
+        .main-grid {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ----- ЛЕВАЯ ПАНЕЛЬ (ДИАЛОГИ) ----- */
+        .dialogs-panel {
+            width: 280px;
+            background: #f9fafb;
+            border-right: 1px solid #e9ecf0;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+        .dialogs-panel .panel-header {
+            padding: 14px 16px;
+            background: white;
+            border-bottom: 1px solid #e9ecf0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+        .dialogs-panel .panel-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: #5c6b7e;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .dialogs-panel .panel-header .badge-count {
+            background: #007aff;
+            color: white;
+            border-radius: 30px;
+            padding: 0 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .dialogs-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 6px 0;
+        }
+
+        /* ----- СТИЛИ ДЛЯ ЭЛЕМЕНТА ДИАЛОГА ----- */
+        .dialog-item {
+            display: flex;
+            flex-direction: column;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .dialog-item:hover {
+            background: #eef2f7;
+        }
+        .dialog-item.active {
+            background: #e1f0ff;
+        }
+        .dialog-item .dialog-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dialog-item .dialog-user {
+            font-weight: 600;
+            font-size: 15px;
+            color: #1a2634;
+        }
+        .dialog-item .dialog-time {
+            font-size: 11px;
+            color: #8e9aa8;
+        }
+        .dialog-item .dialog-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 3px;
+        }
+        .dialog-item .dialog-preview {
+            font-size: 13px;
+            color: #5e6f82;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+        .dialog-item .badge {
+            background: #ff3b30;
+            color: white;
+            border-radius: 30px;
+            padding: 0 8px;
+            font-size: 11px;
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center;
+            height: 20px;
+            line-height: 20px;
+            flex-shrink: 0;
+        }
+
+        /* ----- БЛОК ДОБАВЛЕНИЯ СОБЕСЕДНИКА (ИСПРАВЛЕН!) ----- */
+        .add-user-section {
+            padding: 12px 16px;
+            border-top: 1px solid #e9ecf0;
+            background: white;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;          /* Не даём сжиматься */
+            flex-wrap: wrap;         /* Разрешаем перенос на новую строку */
+        }
+        .add-user-section input {
+            flex: 1;
+            min-width: 100px;        /* Минимальная ширина, чтобы не исчезало */
+            padding: 8px 12px;
+            border: 1px solid #dce1e8;
+            border-radius: 20px;
+            font-size: 13px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .add-user-section input:focus {
+            border-color: #007aff;
+        }
+        .add-user-section button {
+            background: #007aff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;      /* Текст кнопки не переносится */
+            flex-shrink: 0;          /* Кнопка не сжимается */
+        }
+        .add-user-section button:hover {
+            background: #005bb5;
+        }
+
+        /* ----- ПРАВАЯ ПАНЕЛЬ (ЧАТ) ----- */
+        .chat-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+        }
+        .chat-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid #e9ecf0;
+            background: #fafbfc;
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a2634;
+            flex-shrink: 0;
+        }
+        .chat-header .chat-with {
+            color: #5e6f82;
+            font-weight: 400;
+        }
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            background: #fafbfc;
+        }
+        .message {
+            max-width: 70%;
+            padding: 10px 14px;
+            border-radius: 18px;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+            line-height: 1.4;
+            font-size: 14px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            align-self: flex-start;
+            background: white;
+            border: 1px solid #e9ecf0;
+        }
+        .message.my-message {
+            align-self: flex-end;
+            background: #d2e3ff;
+            border-color: #b8d0f0;
+        }
+        .message .username {
+            font-weight: 600;
+            font-size: 13px;
+            color: #2c3e50;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .message .text {
+            display: block;
+            margin-bottom: 4px;
+        }
+        .message .meta {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: #6f7f91;
+            margin-top: 2px;
+        }
+        .message .meta .date-label {
+            background: rgba(0,0,0,0.03);
+            padding: 1px 6px;
+            border-radius: 10px;
+        }
+        .message .edit-btn,
+        .message .delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 4px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .message .edit-btn:hover,
+        .message .delete-btn:hover {
+            opacity: 1;
+        }
+        .message .delete-btn {
+            color: #ff3b30;
+        }
+        .message .edit-btn {
+            color: #007aff;
+        }
+        .no-messages {
+            text-align: center;
+            color: #8e9aa8;
+            padding: 40px 20px;
+            font-size: 14px;
+            align-self: center;
+        }
+
+        /* ----- ФОРМА ОТПРАВКИ ----- */
+        .message-form {
+            padding: 12px 20px;
+            border-top: 1px solid #e9ecf0;
+            background: white;
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .message-form input {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid #dce1e8;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .message-form input:focus {
+            border-color: #007aff;
+        }
+        .message-form button {
+            background: #007aff;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 10px 22px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .message-form button:hover {
+            background: #005bb5;
+        }
+        .message-form input:disabled,
+        .message-form button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* ----- АДАПТАЦИЯ ДЛЯ ТЕЛЕФОНА ----- */
+        @media (max-width: 700px) {
+            body {
+                padding: 0;
+                height: 100vh;
+                background: white;
+            }
+            .app-container {
+                max-height: none;
+                border-radius: 0;
+                box-shadow: none;
+                height: 100vh;
+                width: 100%;
+            }
+            .main-grid {
+                flex-direction: column;
+            }
+            .dialogs-panel {
+                width: 100%;
+                height: 40vh;
+                border-right: none;
+                border-bottom: 1px solid #e9ecf0;
+            }
+            .chat-panel {
+                height: 60vh;
+                flex: none;
+            }
+            .message {
+                max-width: 85%;
+            }
+            .app-header h2 {
+                font-size: 16px;
+            }
+            .add-user-section input {
+                font-size: 12px;
+                min-width: 80px;
+            }
+            .add-user-section button {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
+            .dialog-item .dialog-preview {
+                max-width: 120px;
+            }
+        }
+        @media (max-width: 400px) {
+            .dialogs-panel {
+                height: 30vh;
+            }
+            .chat-panel {
+                height: 70vh;
+            }
+            .message {
+                max-width: 90%;
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+            .message-form input {
+                font-size: 13px;
+                padding: 8px 12px;
+            }
+            .message-form button {
+                font-size: 13px;
+                padding: 8px 16px;
+            }
+            .add-user-section {
+                padding: 8px 12px;
+            }
+            .add-user-section input {
+                min-width: 60px;
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+            .add-user-section button {
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+        }
     </style>
 </head>
 <body>
-    <h2>📱 Чат на Python</h2>
-    <div class="container">
-        <div class="users-list">
-            <h3>Собеседники</h3>
-            <div id="users-container"><div class="user-item" style="color:#999; font-style:italic;">Загрузка...</div></div>
-            <div class="add-user-section">
-                <input type="text" id="new-user-input" placeholder="Новый собеседник">
-                <button id="add-user-btn">➕ Добавить</button>
+    <div class="app-container">
+        <!-- Хедер -->
+        <div class="app-header">
+            <h2>💬 Чат на Python</h2>
+            <div class="user-badge" id="header-user">Введите имя</div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Левая панель -->
+            <div class="dialogs-panel">
+                <div class="panel-header">
+                    <h3>📋 Диалоги</h3>
+                    <span class="badge-count" id="total-unread">0</span>
+                </div>
+                <div class="dialogs-list" id="users-container">
+                    <div class="dialog-item" style="color:#8e9aa8; font-style:italic; text-align:center; justify-content:center;">Загрузка...</div>
+                </div>
+                <!-- Блок добавления (исправлен) -->
+                <div class="add-user-section">
+                    <input type="text" id="new-user-input" placeholder="Новый собеседник">
+                    <button id="add-user-btn">➕ Добавить</button>
+                </div>
+            </div>
+
+            <!-- Правая панель -->
+            <div class="chat-panel">
+                <div class="chat-header">
+                    <span id="chat-header-text">Выберите диалог</span>
+                </div>
+                <div class="chat-box" id="chat-box">
+                    <div class="no-messages">Выберите собеседника слева</div>
+                </div>
+                <form class="message-form" id="chat-form">
+                    <input type="text" id="username" placeholder="Ваше имя" required>
+                    <input type="text" id="text" placeholder="Сообщение" required disabled>
+                    <button type="submit" disabled>Отправить</button>
+                </form>
             </div>
         </div>
-        <div class="chat-area">
-            <div class="chat-box" id="chat-box"><div class="no-messages">Введите ваше имя и добавьте собеседника справа</div></div>
-            <form id="chat-form">
-                <input type="text" id="username" placeholder="Ваше имя" required>
-                <input type="text" id="text" placeholder="Сообщение" required disabled>
-                <button type="submit" disabled>Отправить</button>
-            </form>
-        </div>
     </div>
+
     <script>
         // ----- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ -----
         const chatBox = document.getElementById('chat-box');
@@ -70,11 +477,19 @@
         const usernameInput = document.getElementById('username');
         const textInput = document.getElementById('text');
         const submitBtn = document.querySelector('#chat-form button');
+        const chatHeaderText = document.getElementById('chat-header-text');
+        const headerUser = document.getElementById('header-user');
+        const totalUnread = document.getElementById('total-unread');
 
         let currentUser = '';
         let currentChat = '';
         let lastMessageId = 0;
         let isPageFocused = true;
+
+        // Обновляем имя в хедере
+        function updateHeaderUser(name) {
+            headerUser.textContent = name || 'Введите имя';
+        }
 
         // ----- ФОРМАТИРОВАНИЕ ДАТЫ -----
         function formatDate(dateStr) {
@@ -90,7 +505,7 @@
                 const days = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'];
                 return days[msgDate.getDay()];
             } else {
-                return msgDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+                return msgDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
             }
         }
 
@@ -104,25 +519,18 @@
                 gainNode.connect(audioCtx.destination);
                 oscillator.frequency.value = 800;
                 oscillator.type = 'sine';
-                gainNode.gain.value = 0.15;
+                gainNode.gain.value = 0.12;
                 oscillator.start();
-                oscillator.stop(audioCtx.currentTime + 0.12);
-                if (audioCtx.state === 'suspended') {
-                    audioCtx.resume();
-                }
-            } catch (e) {
-                console.log('Звук не поддерживается');
-            }
+                oscillator.stop(audioCtx.currentTime + 0.1);
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+            } catch (e) {}
         }
 
         // ----- УВЕДОМЛЕНИЯ -----
         function showDesktopNotification(username, text) {
             if (!('Notification' in window)) return;
             if (Notification.permission === 'granted') {
-                new Notification(`📩 Новое сообщение от ${username}`, {
-                    body: text,
-                    icon: '📱'
-                });
+                new Notification(`📩 ${username}`, { body: text, icon: '📱' });
             } else if (Notification.permission === 'default') {
                 Notification.requestPermission();
             }
@@ -134,13 +542,9 @@
             try {
                 const response = await fetch(`/unread_count?user=${encodeURIComponent(currentUser)}`);
                 const data = await response.json();
-                const title = document.querySelector('title');
-                if (data.total > 0) {
-                    title.textContent = `📩 (${data.total}) Чат на Python`;
-                } else {
-                    title.textContent = 'Чат на Python';
-                }
-                document.querySelectorAll('.user-item').forEach(el => {
+                const total = data.total || 0;
+                totalUnread.textContent = total;
+                document.querySelectorAll('.dialog-item').forEach(el => {
                     const name = el.dataset.user;
                     if (!name) return;
                     const count = data.by_user[name] || 0;
@@ -150,31 +554,26 @@
                         const badge = document.createElement('span');
                         badge.className = 'badge';
                         badge.textContent = count;
-                        el.appendChild(badge);
+                        el.querySelector('.dialog-bottom').appendChild(badge);
                     }
                 });
-            } catch (e) {
-                console.error('Ошибка обновления счётчиков:', e);
-            }
+            } catch (e) { console.error('Ошибка обновления счётчиков:', e); }
         }
 
         // ----- ОТМЕТКА ПРОЧИТАННЫХ -----
         async function markMessagesAsRead() {
             if (!currentUser || !currentChat) return;
             try {
-                await fetch(`/messages/read?user=${encodeURIComponent(currentUser)}&other=${encodeURIComponent(currentChat)}`, {
-                    method: 'PUT'
-                });
+                await fetch(`/messages/read?user=${encodeURIComponent(currentUser)}&other=${encodeURIComponent(currentChat)}`, { method: 'PUT' });
                 await updateUnreadCounts();
-            } catch (e) {
-                console.error('Ошибка отметки прочитанных:', e);
-            }
+            } catch (e) { console.error('Ошибка отметки прочитанных:', e); }
         }
 
         // ----- ЗАГРУЗКА СООБЩЕНИЙ -----
         async function loadMessages() {
             if (!currentUser || !currentChat) {
                 chatBox.innerHTML = `<div class="no-messages">Выберите собеседника слева</div>`;
+                chatHeaderText.textContent = 'Выберите диалог';
                 return;
             }
             try {
@@ -186,43 +585,39 @@
                     const lastMsg = messages[messages.length - 1];
                     if (lastMsg.from !== currentUser && messages.length > lastMessageId) {
                         playNotificationSound();
-                        if (!isPageFocused) {
-                            showDesktopNotification(lastMsg.from, lastMsg.text);
-                        }
+                        if (!isPageFocused) showDesktopNotification(lastMsg.from, lastMsg.text);
                     }
                     lastMessageId = messages.length;
                 }
 
                 if (messages.length === 0) {
                     chatBox.innerHTML = `<div class="no-messages">Нет сообщений с ${currentChat}</div>`;
+                    chatHeaderText.textContent = `Чат с ${currentChat}`;
                     return;
                 }
 
                 chatBox.innerHTML = messages.map((msg, index) => {
                     const isMy = msg.from === currentUser;
                     const dateLabel = formatDate(msg.date);
-                    const editedMark = msg.edited ? ' <span style="color:#999;font-size:0.8em;">(ред.)</span>' : '';
+                    const editedMark = msg.edited ? ' ✎' : '';
                     return `<div class="message ${isMy ? 'my-message' : ''}">
-                        <div class="username">${msg.from}</div>
-                        <div class="text">${msg.text}${editedMark}</div>
+                        <span class="username">${msg.from}</span>
+                        <span class="text">${msg.text}${editedMark}</span>
                         <div class="meta">
-                            <span class="time">${msg.time}</span>
+                            <span>${msg.time}</span>
                             <span class="date-label">${dateLabel}</span>
                             ${isMy ? `
                                 <button class="edit-btn" data-index="${index}">✎</button>
-                                <button class="delete-btn" data-index="${index}">🗑️</button>
+                                <button class="delete-btn" data-index="${index}">🗑</button>
                             ` : ''}
                         </div>
                     </div>`;
                 }).join('');
                 chatBox.scrollTop = chatBox.scrollHeight;
-                if (messages.length > 0) {
-                    await markMessagesAsRead();
-                }
+                chatHeaderText.textContent = `Чат с ${currentChat}`;
+                if (messages.length > 0) await markMessagesAsRead();
                 await updateUnreadCounts();
-            } catch (e) {
-                console.error('Ошибка загрузки сообщений:', e);
-            }
+            } catch (e) { console.error('Ошибка загрузки сообщений:', e); }
         }
 
         // ----- РЕДАКТИРОВАНИЕ -----
@@ -234,44 +629,65 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ new_text: newText.trim() })
                 });
-                if (response.ok) {
-                    await loadMessages();
-                    await updateUnreadCounts();
-                } else {
-                    const error = await response.json();
-                    alert(`Ошибка: ${error.detail || 'Не удалось редактировать'}`);
-                }
-            } catch (e) {
-                console.error('Ошибка редактирования:', e);
-            }
+                if (response.ok) { await loadMessages(); }
+                else { const error = await response.json(); alert(`Ошибка: ${error.detail || 'Не удалось редактировать'}`); }
+            } catch (e) { console.error('Ошибка редактирования:', e); }
         }
 
-        // ----- УДАЛЕНИЕ (НОВАЯ ФУНКЦИЯ) -----
+        // ----- УДАЛЕНИЕ -----
         async function deleteMessage(index) {
             if (!currentUser) return;
-            if (!confirm('Удалить это сообщение?')) return;
-
+            if (!confirm('Удалить сообщение?')) return;
             try {
-                const response = await fetch(`/messages/${index}?user=${encodeURIComponent(currentUser)}`, {
-                    method: 'DELETE'
-                });
-                if (response.ok) {
-                    await loadMessages();
-                    await loadUsers();
-                    await updateUnreadCounts();
-                } else {
-                    const error = await response.json();
-                    alert(`Ошибка: ${error.detail || 'Не удалось удалить'}`);
-                }
-            } catch (e) {
-                console.error('Ошибка удаления:', e);
+                const response = await fetch(`/messages/${index}?user=${encodeURIComponent(currentUser)}`, { method: 'DELETE' });
+                if (response.ok) { await loadMessages(); await loadDialogs(); await updateUnreadCounts(); }
+                else { const error = await response.json(); alert(`Ошибка: ${error.detail || 'Не удалось удалить'}`); }
+            } catch (e) { console.error('Ошибка удаления:', e); }
+        }
+
+        // ----- ЗАГРУЗКА ИСТОРИИ ДИАЛОГОВ -----
+        async function loadDialogs() {
+            if (!currentUser) {
+                usersContainer.innerHTML = `<div class="dialog-item" style="color:#8e9aa8; text-align:center; justify-content:center;">Введите ваше имя</div>`;
+                return;
             }
+            try {
+                const response = await fetch(`/dialogs?user=${encodeURIComponent(currentUser)}`);
+                const data = await response.json();
+                const dialogs = data.dialogs || [];
+
+                if (dialogs.length === 0) {
+                    usersContainer.innerHTML = `<div class="dialog-item" style="color:#8e9aa8; text-align:center; justify-content:center;">Нет диалогов</div>`;
+                    return;
+                }
+
+                usersContainer.innerHTML = dialogs.map(dialog => {
+                    const isActive = dialog.user === currentChat;
+                    const preview = dialog.last_message.from === currentUser ? `Вы: ${dialog.last_message.text}` : dialog.last_message.text;
+                    return `<div class="dialog-item ${isActive ? 'active' : ''}" data-user="${dialog.user}" onclick="selectUser('${dialog.user}')">
+                        <div class="dialog-top">
+                            <span class="dialog-user">${dialog.user}</span>
+                            <span class="dialog-time">${dialog.last_message.time}</span>
+                        </div>
+                        <div class="dialog-bottom">
+                            <span class="dialog-preview">${preview}</span>
+                        </div>
+                    </div>`;
+                }).join('');
+
+                if (currentChat) {
+                    document.querySelectorAll('.dialog-item').forEach(el => {
+                        if (el.dataset.user === currentChat) el.classList.add('active');
+                    });
+                }
+                await updateUnreadCounts();
+            } catch (e) { console.error('Ошибка загрузки диалогов:', e); }
         }
 
         // ----- ВЫБОР СОБЕСЕДНИКА -----
         window.selectUser = function(user) {
             currentChat = user;
-            document.querySelectorAll('.user-item').forEach(el => {
+            document.querySelectorAll('.dialog-item').forEach(el => {
                 el.classList.toggle('active', el.dataset.user === user);
             });
             textInput.disabled = false;
@@ -280,6 +696,7 @@
             lastMessageId = 0;
             loadMessages();
             markMessagesAsRead();
+            loadDialogs();
         };
 
         // ----- ДОБАВЛЕНИЕ СОБЕСЕДНИКА -----
@@ -287,21 +704,24 @@
         const addUserBtn = document.getElementById('add-user-btn');
         addUserBtn.addEventListener('click', function() {
             const newUser = newUserInput.value.trim();
-            if (!newUser) { alert('Введите имя собеседника'); return; }
-            if (newUser === currentUser) { alert('Вы не можете быть сами себе собеседником'); return; }
-            const existing = document.querySelector(`.user-item[data-user="${newUser}"]`);
-            if (existing) { alert('Этот собеседник уже есть в списке'); return; }
+            if (!newUser) { alert('Введите имя'); return; }
+            if (newUser === currentUser) { alert('Это вы'); return; }
+            const existing = document.querySelector(`.dialog-item[data-user="${newUser}"]`);
+            if (existing) { alert('Уже есть'); return; }
             const newItem = document.createElement('div');
-            newItem.className = 'user-item';
+            newItem.className = 'dialog-item';
             newItem.dataset.user = newUser;
-            newItem.textContent = newUser;
+            newItem.innerHTML = `
+                <div class="dialog-top"><span class="dialog-user">${newUser}</span><span class="dialog-time">сейчас</span></div>
+                <div class="dialog-bottom"><span class="dialog-preview">Новый диалог</span></div>
+            `;
             newItem.onclick = function() { selectUser(newUser); };
             usersContainer.appendChild(newItem);
             newUserInput.value = '';
             selectUser(newUser);
         });
 
-        // ----- ОТПРАВКА -----
+        // ----- ОТПРАВКА СООБЩЕНИЯ -----
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = usernameInput.value.trim();
@@ -309,8 +729,9 @@
             if (!username || !text || !currentChat) return;
             if (username !== currentUser) {
                 currentUser = username;
-                await loadUsers();
-                if (currentChat) { await loadMessages(); }
+                updateHeaderUser(username);
+                await loadDialogs();
+                if (currentChat) await loadMessages();
             }
             const formData = new FormData();
             formData.append('username', username);
@@ -320,55 +741,23 @@
                 await fetch('/send', { method: 'POST', body: formData });
                 textInput.value = '';
                 await loadMessages();
-                await loadUsers();
-            } catch (e) {
-                console.error('Ошибка отправки:', e);
-            }
+                await loadDialogs();
+            } catch (e) { console.error('Ошибка отправки:', e); }
         });
 
-        // ----- ЗАГРУЗКА СПИСКА -----
-        async function loadUsers() {
-            try {
-                const response = await fetch('/users');
-                const data = await response.json();
-                const users = data.users || [];
-                const filtered = users.filter(u => u !== currentUser);
-                if (filtered.length === 0) {
-                    usersContainer.innerHTML = `<div class="user-item" style="color:#999; font-style:italic;">Нет собеседников. Добавьте вручную</div>`;
-                    return;
-                }
-                usersContainer.innerHTML = filtered.map(user => `
-                    <div class="user-item" data-user="${user}" onclick="selectUser('${user}')">${user}</div>
-                `).join('');
-                if (currentChat) {
-                    document.querySelectorAll('.user-item').forEach(el => {
-                        if (el.dataset.user === currentChat) { el.classList.add('active'); }
-                    });
-                }
-                await updateUnreadCounts();
-            } catch (e) {
-                console.error('Ошибка загрузки пользователей:', e);
-            }
-        }
-
-        // ----- ОБРАБОТЧИКИ ДЛЯ КНОПОК -----
+        // ----- ОБРАБОТЧИК КНОПОК -----
         chatBox.addEventListener('click', async (e) => {
-            // Редактирование
             const editBtn = e.target.closest('.edit-btn');
             if (editBtn) {
                 const index = parseInt(editBtn.dataset.index);
                 if (isNaN(index)) return;
-                const messageDiv = editBtn.closest('.message');
-                const textDiv = messageDiv.querySelector('.text');
-                const currentText = textDiv.textContent.replace(' (ред.)', '').trim();
-                const newText = prompt('Редактировать сообщение:', currentText);
-                if (newText !== null && newText.trim() !== currentText) {
-                    await editMessage(index, newText);
-                }
+                const msgDiv = editBtn.closest('.message');
+                const textSpan = msgDiv.querySelector('.text');
+                const currentText = textSpan.textContent.replace(' ✎', '').trim();
+                const newText = prompt('Редактировать:', currentText);
+                if (newText !== null && newText.trim() !== currentText) await editMessage(index, newText);
                 return;
             }
-
-            // Удаление
             const deleteBtn = e.target.closest('.delete-btn');
             if (deleteBtn) {
                 const index = parseInt(deleteBtn.dataset.index);
@@ -381,7 +770,7 @@
         setInterval(() => {
             if (currentUser && currentChat) {
                 loadMessages();
-                loadUsers();
+                loadDialogs();
                 updateUnreadCounts();
             }
         }, 3000);
@@ -401,11 +790,17 @@
             const name = usernameInput.value.trim();
             if (name) {
                 currentUser = name;
-                loadUsers();
-                if (currentChat) { loadMessages(); }
+                updateHeaderUser(name);
+                loadDialogs();
+                if (currentChat) loadMessages();
             }
         });
-        chatBox.innerHTML = `<div class="no-messages">Введите ваше имя и добавьте собеседника справа</div>`;
+        if (usernameInput.value.trim()) {
+            currentUser = usernameInput.value.trim();
+            updateHeaderUser(currentUser);
+            loadDialogs();
+        }
+        chatBox.innerHTML = `<div class="no-messages">Введите имя и выберите собеседника</div>`;
     </script>
 </body>
 </html>
