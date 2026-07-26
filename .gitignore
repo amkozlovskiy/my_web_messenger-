@@ -5,7 +5,7 @@ __pycache__/
 *.pyc
 
 messages.json
-messages.json
+message.json
 
 .vscode/
 .idea/
